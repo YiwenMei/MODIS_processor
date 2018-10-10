@@ -1,5 +1,6 @@
 # MODIS_processor
 This repository contains Matlab codes I made to process different MODIS products. Currently it contains the following:
+
  1)Caculate the mean emissivity using MOD11A1 and MYD11A1 band 31 & 32 (so, four) images for a study area of a day (Emis_process.m and MODISimg.m);
  
  2)Caculate the fraction of a land cover type (from Land Cover Type 3 of the MCD12Q1 product) over regular grid cells with a user-specific resolution (LC_process.m, LC_Frac.m and MODISimg.m); and
