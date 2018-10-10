@@ -8,23 +8,24 @@
 %  2)mosaic all LC images together (MODISimg.m);
 %  3)reproject, crop and resample the mosaiced LC image (MODISimg.m);
 %  4)calculate the fraction of a land cover class for a block (LC_Frac.m);
-%  5)output the land cover fraction images.
+%  5)output the land cover and land cover fraction images.
 
 %% Input
 % lcfl: full name list of the land cover files;
 % wkpth: working directory for the code (e.g. C:\...\wkdir\);
 % oupth: output directory for the images (e.g. C:\...\LCFrac\);
-% rx/ry: resolution of output emissivity with same unit required by "coor";
-% xl/xr: left/right corner coordinate with same unit required by "coor";
-% yb/yt: same as xl/xr but for the bottom and top corner coordinate;
-% coor : coordinate system of output image (e.g. 'EPSG:102012');
-%  thr : a percentage of nodata value for a block where blocks with nodata value
-%        more than this percentage will be assigned ndv;
-%  ndv : a scalar for nodata value for the output files.
+% rx/ry: resolution of output images;
+% xl/xr: left/right side coordinate;
+% yb/yt: same as xl/xr but for the bottom/top side's;
+%  ors : output coordinate system (e.g. 'EPSG:102012');
+%  thr : a percentage of nodata value for a block where block with this percent
+%        of nodata value is assigned the nodata value;
+%  ndv : no-data value assigned to the output images.
 
 %% Output
-% Output images are stored in oupth with the naming convention as LCXX_yyyy.tif
-%  where XX represents the ID of a land cover class.
+% imout: mosaiced land cover image of the study area;
+% Land cover fraction images are stored in oupth with the naming convention as
+%  LCXX_yyyy.tif where XX represents the ID of a land cover class.
 
 %% Additional Note
 %  This function processes the MCD12Q1 land cover type 3 record. ID of the land
@@ -34,7 +35,7 @@
 %   06 - Deciduous Broadleaf, 07 - Evergreen Needleleaf, 08 - Deciduous Needleleaf,
 %   09 - Unvegetated,         10 - Urban and Built-up Lands.
 
-function LC_process(lcfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,coor,thr,ndv)
+function imout=LC_process(lcfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,thr,ndv)
 %% Properties of input records
 hif=hdfinfo(lcfl(1,:));
 rn=hif.Vgroup.Name; % Name of the record
@@ -44,7 +45,7 @@ vrf=hif.Name; % Name of the field
 ndv_o=double(hif.Attributes(13).Value); % no-data-value of LC
 
 %% Image processing (read, mosaic, project, crop, resample)
-imout=MODISimg(lcfl,rn,vrf,wkpth,[],xl,xr,[],yb,yt,[],coor,'near');
+imout=MODISimg(lcfl,rn,vrf,wkpth,[],xl,xr,[],yb,yt,[],ors,'near');
 imout(imout==ndv_o)=NaN;
 
 %% Calculate land cover fraction
@@ -68,7 +69,7 @@ for v=1:length(lcc)
   fclose(fid);
 
   fun='gdal_translate -of GTiff -r bilinear '; % GDAL function
-  pr1=['-a_srs ' coor ' '];
+  pr1=['-a_srs ' ors ' '];
   IMo=fullfile(oupth,sprintf('LC%02i_%s.tif',lcc(v).Value,ys));
 
   system([fun pr1 imo ' "' IMo '"']);
