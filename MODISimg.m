@@ -19,10 +19,10 @@
 % wkpth: working directory for the code (e.g. C:\...\wkdir\);
 %  oun : full name of output geotiff image (e.g. C:\...\XXX.tif; set it to "[]"
 %        if no need to output the image);
-% xl/xr: left/right corner coordinate with same unit required by "coor";
-% yb/yt: same as xl/xr but for the bottom and top corner coordinate;
-% rx/ry: resolution of output image with same unit required by "coor";
-% coor : coordinate system of output image (e.g. 'EPSG:102012');
+% rx/ry: resolution of output images;
+% xl/xr: left/right side coordinate;
+% yb/yt: same as xl/xr but for the bottom/top side's;
+%  ors : coordinate system of output image (e.g. 'EPSG:102012');
 %  itm : interpolation method accepted in GDAL (e.g. 'bilinear').
 
 %% Output
@@ -32,7 +32,7 @@
 %   1)Need to have GDAL installed so as to run the code;
 %   2)No-data value of the original image preserved in "oun".
 
-function imout=MODISimg(imL,rn,vrf,wkpth,oun,xl,xr,rx,yb,yt,ry,coor,itm)
+function imout=MODISimg(imL,rn,vrf,wkpth,oun,xl,xr,rx,yb,yt,ry,ors,itm)
 %% Convert original to geotiff
 [~,~,fex]=fileparts(imL(1,:));
 
@@ -59,7 +59,7 @@ system([fun '"' im1 '" ' inv]); % On linux
 
 %% Project image
 fun='gdalwarp -of GTiff -overwrite -r bilinear ';
-pr1=['-t_srs ' coor ' '];
+pr1=['-t_srs ' ors ' '];
 pr2=sprintf('-te %i %i %i %i ',xl,yb,xr,yt);
 if ~isempty(rx) && ~isempty(ry)
   pr3=sprintf('-tr %i %i ',rx,ry);

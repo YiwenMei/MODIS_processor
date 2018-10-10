@@ -17,16 +17,16 @@
 %        MOD11A1/MYD11A1 records for the location of interest for a day;
 % wkpth: working directory for the code (e.g. C:\...\wkdir\);
 % oupth: output directory for the images (e.g. C:\...\Emis\2001\);
-% rx/ry: resolution of output emissivity with same unit required by "coor";
-% xl/xr: left/right corner coordinate with same unit required by "coor";
-% yb/yt: same as xl/xr but for the bottom and top corner coordinate;
-% coor : coordinate system of output images;
+% rx/ry: resolution of output images;
+% xl/xr: left/right side coordinate;
+% yb/yt: same as xl/xr but for the bottom/top side's;
+%  ors : output coordinate system (e.g. 'EPSG:102012');
 %  ndv : no-data value assigned to the output images.
 
 %% Output
 % Output images are stored in oupth as EMSyyyymmdd.tif.
 
-function Emis_process(Emfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,coor,ndv)
+function Emis_process(Emfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,ndv)
 emfl=cell2mat(Emfl); % Check whether the list is empty
 if ~isempty(emfl)
 %% Properties of input records
@@ -46,7 +46,7 @@ if ~isempty(emfl)
     for b=1:size(vrf,1)
       if ~isempty(Emfl{t})
 % Image processing (read, mosaic, project, crop, resample)
-        imo=MODISimg(Emfl{t},rn,vrf(b,:),wkpth,[],xl,xr,rx,yb,yt,ry,coor,'bilinear');
+        imo=MODISimg(Emfl{t},rn,vrf(b,:),wkpth,[],xl,xr,rx,yb,yt,ry,ors,'bilinear');
         imo(imo==ndv_o)=NaN;
         imo=imo*scf+ofs;
       else
@@ -78,7 +78,7 @@ if ~isempty(emfl)
   fclose(fid);
 
   fun='gdal_translate -of GTiff -r bilinear '; % GDAL function
-  pr1=['-a_srs ' coor ' '];
+  pr1=['-a_srs ' ors ' '];
   IMo=fullfile(oupth,['EMS' ds '.tif']);
 
   system([fun pr1 '"' imo '" "' IMo '"']);
