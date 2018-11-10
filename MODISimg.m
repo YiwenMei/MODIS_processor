@@ -58,18 +58,19 @@ system([fun '"' im1 '" ' inv]); % On linux
 % system([fun '"' im1 '" "' inv '"']); % On windows
 
 %% Project image
-fun='gdalwarp -of GTiff -overwrite -r bilinear ';
+fun='gdalwarp -of GTiff -overwrite ';
 pr1=['-t_srs ' ors ' '];
 pr2=sprintf('-te %i %i %i %i ',xl,yb,xr,yt);
+pr3=['-r ' itm ' '];
 if ~isempty(rx) && ~isempty(ry)
-  pr3=sprintf('-tr %i %i ',rx,ry);
+  pr4=sprintf('-tr %i %i ',rx,ry);
 else
-  pr3=[];
+  pr4=[];
 end
-par=[pr1 pr2 pr3];
+prm=[pr1 pr2 pr3 pr4];
 ouv=fullfile(wkpth,'imout.tif');
 
-system([fun par '"' im1 '" "' ouv '"']);
+system([fun prm '"' im1 '" "' ouv '"']);
 delete(inv);
 delete(im1);
 

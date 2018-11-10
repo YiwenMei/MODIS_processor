@@ -50,7 +50,7 @@ if kx>1 || ky>1
     vi=double(hdfread(vifl(n,:),vrf));
     vi(vi==ndv_o)=NaN;
     vi=vi/scf;
-    vi=resizeimg(vi,[],kx,[],ky,fullfile(wkpth,'id.mat'),thr,ndv);
+    vi=resizeimg(vi,[],kx,[],ky,fullfile(wkpth,['id' num2str(rx,'%i') '.mat']),thr,ndv);
 
 % Write the upscaled image to the working directory
     hif=hdfinfo(vifl(n,:),'EOS');
