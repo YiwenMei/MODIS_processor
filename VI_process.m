@@ -7,7 +7,7 @@
 %  1)read all MOD13Q1/MYD13Q1 NDVI/EVI tiles for the study area;
 %  2)upscale each tile to a coarser resolution (resizeimg.m);
 %  3)mosaic all NDVI/EVI tiles together (MODISimg.m);
-%  4)reproject, crop and resample the mosaiced LC image (MODISimg.m);
+%  4)reproject, crop and resample the mosaiced VI image (MODISimg.m);
 
 %% Input
 % vifl : full name list of the MODIS vegetation index files;
@@ -27,11 +27,20 @@
 %  is VIyyyyddd.tif the same as the input date.
 
 function VI=VI_process(vifl,vrf,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,thr,ndv)
+%% Check the input
+switch nargin
+  case {1:12}; error('Not enough number of arguments');
+  case 13
+  otherwise; error('Too many number of arguments');
+end
+
 %% Properties of input records
 hif=hdfinfo(vifl(1,:));
 hif=hif.Vgroup.Vgroup(1).SDS(1);
 scf=double(hif.Attributes(5).Value); % scale factor
 ndv_o=double(hif.Attributes(4).Value); % no-data-value of LC
+[~,nm,~]=fileparts(vifl(1,:));
+nm=regexp(nm,'(?<year>\d+)(?<day>\d{3})','match','once');
 
 hif=hdfinfo(vifl(1,:),'EOS');
 hif=hif.Grid;
@@ -46,32 +55,21 @@ kx=max(1,fix(rx/rxi));
 ky=max(1,fix(ry/ryi));
 if kx>1 || ky>1
 %% Upscale the image
-  for n=1:size(vifl,1)
+  parfor n=1:size(vifl,1)
     vi=double(hdfread(vifl(n,:),vrf));
     vi(vi==ndv_o)=NaN;
     vi=vi/scf;
-    vi=resizeimg(vi,[],kx,[],ky,fullfile(wkpth,['id' num2str(rx,'%i') '.mat']),thr,ndv);
+    vi=resizeimg(vi,ndv,kx,ky,fullfile(wkpth,['idVI_r' num2str(rx,'%i') '.mat']),thr);
 
 % Write the upscaled image to the working directory
     hif=hdfinfo(vifl(n,:),'EOS');
     hif=hif.Grid;
     xli=hif.UpperLeft(1);
     ybi=hif.LowerRight(2);
-    vin=[wkpth 'VI.asc'];
 
-    fid=fopen(vin,'w');
-    fprintf(fid,'%s\n%s\n%s\n%s\n%s\n%s\n',['ncols ' num2str(size(vi,2))],['nrows '...
-        num2str(size(vi,1))],['xllcorner ' num2str(xli,12)],['yllcorner ' num2str(ybi,...
-        12)],['cellsize ' num2str(kx*rxi,12)],['NODATA_value ' num2str(ndv)]);
-    dlmwrite(vin,vi,'delimiter',' ','-append');
-    fclose(fid);
-
-    fun='gdal_translate -of GTiff -r bilinear ';
-    pr1='-a_srs "+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs" ';
-    IMo=fullfile(wkpth,['VI' num2str(n,'%02i') '.tif']);
-
-    system([fun pr1 '"' vin '" "' IMo '"']);
-    delete(vin);
+    vi_ors='"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs" ';
+    IMo=fullfile(wkpth,['VI' nm '_' num2str(n,'%02i') '.tif']);
+    matV2tif(IMo,vi,xli,ybi,kx*rxi,ndv,vi_ors,wkpth);
   end
 
 %% Process the upsacled image
@@ -82,7 +80,7 @@ if kx>1 || ky>1
   ds=datestr(ds,'yyyymmdd');
 
 % Image processing (read, mosaic, project, crop, resample)
-  tfl=fullfile(wkpth,'VI*.tif');
+  tfl=[wkpth 'VI' nm '_*.tif'];
   VI=MODISimg(tfl,[],[],wkpth,fullfile(oupth,['VI' ds '.tif']),xl,xr,rx,yb,yt,ry,...
       ors,'bilinear');
 end

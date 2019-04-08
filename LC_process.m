@@ -36,6 +36,15 @@
 %   09 - Unvegetated,         10 - Urban and Built-up Lands.
 
 function LC=LC_process(lcfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,thr,ndv)
+%% Check the input
+switch nargin
+  case {1:11}; error('Not enough number of arguments');
+
+  case 12
+
+  otherwise; error('Too many number of arguments');
+end
+
 %% Properties of input records
 hif=hdfinfo(lcfl(1,:));
 rn=hif.Vgroup.Name; % Name of the record
@@ -51,28 +60,15 @@ LC(LC==ndv_o)=NaN;
 %% Calculate land cover fraction
 [~,ys,~]=fileparts(lcfl(1,:));
 ys=ys(10:13);
-imo=[wkpth 'p.asc'];
 
 rsx_in=(xr-xl)/size(LC,2);
 rsy_in=(yt-yb)/size(LC,1);
-for v=1:length(lcc)
-  LCF=LC_Frac(LC,[xl xr rsx_in],[xl xr rx],[yt yb rsy_in],[yt yb ry],...
-      fullfile(wkpth,sprintf('id%irs.mat',rx)),double(lcc(v).Value),thr,ndv);
+parfor v=1:length(lcc)
+  LCF=LC_Frac(LC,ndv,[xl xr rx],[yt yb ry],fullfile(wkpth,sprintf('idLC_r%i.mat',rx)),...
+      double(lcc(v).Value),thr,[xl xr rsx_in],[yt yb rsy_in]);
 
 % Output the land cover fraction images
-  fid=fopen(imo,'w');
-  fprintf(fid,'%s\n%s\n%s\n%s\n%s\n%s\n',['ncols ' num2str(size(LCF,2))],...
-      ['nrows ' num2str(size(LCF,1))],['xllcorner ' num2str(xl,12)],...
-      ['yllcorner ' num2str(yb,12)],['cellsize ' num2str(rx,12)],...
-      ['NODATA_value ' num2str(ndv)]);
-  dlmwrite(imo,LCF,'delimiter',' ','-append');
-  fclose(fid);
-
-  fun='gdal_translate -of GTiff -r bilinear '; % GDAL function
-  pr1=['-a_srs ' ors ' '];
   IMo=fullfile(oupth,sprintf('LC%02i_%s.tif',lcc(v).Value,ys));
-
-  system([fun pr1 imo ' "' IMo '"']);
-  delete(imo);
+  matV2tif(IMo,LCF,xl,yb,rx,ndv,ors,wkpth);
 end
 end

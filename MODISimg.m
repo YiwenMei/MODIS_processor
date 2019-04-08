@@ -33,26 +33,40 @@
 %   2)No-data value of the original image preserved in "oun".
 
 function imout=MODISimg(imL,rn,vrf,wkpth,oun,xl,xr,rx,yb,yt,ry,ors,itm)
-%% Convert original to geotiff
-[~,~,fex]=fileparts(imL(1,:));
+%% Check the input
+switch nargin
+  case {1:11}; error('Not enough number of arguments');
 
+  case 12; itm='bilinear';
+  
+  case 13
+  
+  otherwise; error('Too many number of arguments');
+end
+
+%% Convert original to geotiff
+[~,nm,fex]=fileparts(imL(1,:));
 if ~strcmp(fex,'.tif')
+  nm=regexp(nm,'A(?<year>\d+)(?<day>\d{3})','match');
+  nm=cell2mat(nm);
+
   fun='gdal_translate -of GTiff '; % GDAL function
   pr1=['-r ' itm ' '];
-  for n=1:size(imL,1)
+  parfor n=1:size(imL,1)
     inv=['HDF4_EOS:EOS_GRID:"' imL(n,:) '":' rn ':' vrf]; % Full name with record
-    im1=fullfile(wkpth,['p' num2str(n,'%02i') '.tif']);   % name and field name
+    im1=fullfile(wkpth,[nm '_p' num2str(n,'%02i') '.tif']);   % name and field name
 
     system([fun pr1 inv ' "' im1 '"']);
   end
 
-  inv=fullfile(wkpth,'p*.tif');
+  inv=fullfile(wkpth,[nm '_p*.tif']);
 else
   inv=imL;
+  nm=cell2mat(regexp(nm,'(?<year>\d+)(?<day>\d{3})','match'));
 end
 %% Build virtual mosaiced image
 fun='gdalbuildvrt -overwrite ';
-im1=fullfile(wkpth,'p.vrt');
+im1=fullfile(wkpth,[nm '.vrt']);
 
 system([fun '"' im1 '" ' inv]); % On linux
 % system([fun '"' im1 '" "' inv '"']); % On windows
@@ -68,7 +82,7 @@ else
   pr4=[];
 end
 prm=[pr1 pr2 pr3 pr4];
-ouv=fullfile(wkpth,'imout.tif');
+ouv=fullfile(wkpth,[nm '.tif']);
 
 system([fun prm '"' im1 '" "' ouv '"']);
 delete(inv);

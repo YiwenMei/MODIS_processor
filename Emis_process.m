@@ -27,6 +27,15 @@
 % Output images are stored in oupth as EMSyyyymmdd.tif.
 
 function Emis_process(Emfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,ndv)
+%% Check the input
+switch nargin
+  case {1:10}; error('Not enough number of arguments');
+
+  case 11
+  
+  otherwise; error('Too many number of arguments');
+end
+
 emfl=cell2mat(Emfl); % Check whether the list is empty
 if ~isempty(emfl)
 %% Properties of input records
@@ -63,25 +72,13 @@ if ~isempty(emfl)
   IMO(isnan(IMO))=ndv;
 
 %% Output the processed emissivity
-  imo=[wkpth 'p.asc'];
   [~,ns,~]=fileparts(emfl(1,:));
   ys=ns(10:13);
   ds=ns(14:16);
   ds=doy2date(str2double(ds),str2double(ys));
   ds=datestr(ds,'yyyymmdd');
-
-  fid=fopen(imo,'w');
-  fprintf(fid,'%s\n%s\n%s\n%s\n%s\n%s\n',['ncols ' num2str(size(IMO,2))],['nrows '...
-      num2str(size(IMO,1))],['xllcorner ' num2str(xl,12)],['yllcorner '...
-      num2str(yb,12)],['cellsize ' num2str(rx,12)],['NODATA_value ' num2str(ndv)]);
-  dlmwrite(imo,IMO,'delimiter',' ','-append');
-  fclose(fid);
-
-  fun='gdal_translate -of GTiff -r bilinear '; % GDAL function
-  pr1=['-a_srs ' ors ' '];
   IMo=fullfile(oupth,['EMS' ds '.tif']);
 
-  system([fun pr1 '"' imo '" "' IMo '"']);
-  delete(imo);
+  matV2tif(IMo,IMO,xl,yb,rx,ndv,ors,wkpth);
 end
 end
