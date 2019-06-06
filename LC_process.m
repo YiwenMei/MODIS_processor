@@ -39,9 +39,7 @@ function LC=LC_process(lcfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,thr,ndv)
 %% Check the input
 switch nargin
   case {1:11}; error('Not enough number of arguments');
-
   case 12
-
   otherwise; error('Too many number of arguments');
 end
 

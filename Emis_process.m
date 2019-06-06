@@ -30,9 +30,7 @@ function Emis_process(Emfl,wkpth,oupth,xl,xr,rx,yb,yt,ry,ors,ndv)
 %% Check the input
 switch nargin
   case {1:10}; error('Not enough number of arguments');
-
   case 11
-  
   otherwise; error('Too many number of arguments');
 end
 

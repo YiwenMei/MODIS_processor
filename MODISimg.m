@@ -47,14 +47,14 @@ end
 %% Convert original to geotiff
 [~,nm,fex]=fileparts(imL(1,:));
 if ~strcmp(fex,'.tif')
-  nm=regexp(nm,'A(?<year>\d+)(?<day>\d{3})','match');
+  nm=regexp(nm,'A(?<year>\d{4})(?<day>\d{3})','match');
   nm=cell2mat(nm);
 
   fun='gdal_translate -of GTiff '; % GDAL function
   pr1=['-r ' itm ' '];
   parfor n=1:size(imL,1)
     inv=['HDF4_EOS:EOS_GRID:"' imL(n,:) '":' rn ':' vrf]; % Full name with record
-    im1=fullfile(wkpth,[nm '_p' num2str(n,'%02i') '.tif']);   % name and field name
+    im1=fullfile(wkpth,[nm '_p' num2str(n,'%02i') '.tif']); % name and field name
 
     system([fun pr1 inv ' "' im1 '"']);
   end
@@ -62,8 +62,11 @@ if ~strcmp(fex,'.tif')
   inv=fullfile(wkpth,[nm '_p*.tif']);
 else
   inv=imL;
-  nm=cell2mat(regexp(nm,'(?<year>\d+)(?<day>\d{3})','match'));
+  fpth=fileparts(inv(1,:));
+  nm=cell2mat(regexp(nm,'A(?<year>\d{4})(?<day>\d{3})','match'));
+  inv=fullfile(fpth,[nm '_p*.tif']);
 end
+
 %% Build virtual mosaiced image
 fun='gdalbuildvrt -overwrite ';
 im1=fullfile(wkpth,[nm '.vrt']);

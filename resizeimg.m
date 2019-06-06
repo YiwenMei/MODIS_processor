@@ -38,6 +38,9 @@ switch nargin
     x=nx/2:nx:size(Zo,2)-nx/2;
     y=size(Zo,1)-ny/2:-ny:ny/2;
 
+    rx=1;
+    ry=1;
+
   case 7; error('Y coordinate missing');
 
   case 8
@@ -55,6 +58,9 @@ switch nargin
       y=Yo(1)-Yo(3)*ny/2:-Yo(3)*ny:Yo(2)+Yo(3)*ny/2;
     end
 
+    rx=Xo(3);
+    ry=Yo(3);
+
   otherwise; error('Too many number of arguments');
 end
 
@@ -70,19 +76,22 @@ Yq=reshape(Yq,numel(Yq),1);
 %% Find the N nearest neighbors
 N=max([1 round(pi()*nx*ny/4)]); % Search area
 if exist(idfn,'file')~=0
-  load(idfn,'id');
+  id=matfile(idfn);
+  d=id.d;
+  id=id.id;
 else
-  [id,~]=knnsearch([X,Y],[Xq,Yq],'k',N);
-  save(idfn,'id');
+  [id,d]=knnsearch([X,Y],[Xq,Yq],'k',N);
+  save(idfn,'id','d');
 end
 clear X Y
 
 %% Mean/sum of domain
 Z=Zo(id);
 Z(isnan(Xq),:)=NaN;
-Z(Z==ndv)=NaN;
+Z(Z==ndv | d>hypot(nx*rx,ny*ry))=NaN;
 Zq=nanmean(Z,2);
 Zqa=nansum(Z,2);
+clear d
 
 Z=Zo(id);
 Z=Z==ndv;

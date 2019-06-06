@@ -39,8 +39,6 @@ hif=hdfinfo(vifl(1,:));
 hif=hif.Vgroup.Vgroup(1).SDS(1);
 scf=double(hif.Attributes(5).Value); % scale factor
 ndv_o=double(hif.Attributes(4).Value); % no-data-value of LC
-[~,nm,~]=fileparts(vifl(1,:));
-nm=regexp(nm,'(?<year>\d+)(?<day>\d{3})','match','once');
 
 hif=hdfinfo(vifl(1,:),'EOS');
 hif=hif.Grid;
@@ -55,11 +53,13 @@ kx=max(1,fix(rx/rxi));
 ky=max(1,fix(ry/ryi));
 if kx>1 || ky>1
 %% Upscale the image
+  Tfl=[];
+  idn=fullfile(wkpth,['idVI_r' num2str(rx,'%i') '.mat']);
   parfor n=1:size(vifl,1)
     vi=double(hdfread(vifl(n,:),vrf));
     vi(vi==ndv_o)=NaN;
     vi=vi/scf;
-    vi=resizeimg(vi,ndv,kx,ky,fullfile(wkpth,['idVI_r' num2str(rx,'%i') '.mat']),thr);
+    vi=resizeimg(vi,ndv,kx,ky,idn,thr);
 
 % Write the upscaled image to the working directory
     hif=hdfinfo(vifl(n,:),'EOS');
@@ -68,8 +68,15 @@ if kx>1 || ky>1
     ybi=hif.LowerRight(2);
 
     vi_ors='"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs" ';
-    IMo=fullfile(wkpth,['VI' nm '_' num2str(n,'%02i') '.tif']);
-    matV2tif(IMo,vi,xli,ybi,kx*rxi,ndv,vi_ors,wkpth);
+
+    [~,nm,~]=fileparts(vifl(n,:));
+    nm=regexp(nm,'A(?<year>\d+)(?<day>\d{3})','match');
+    nm=cell2mat(nm);
+    tfn=sprintf('%s%02i.tif',[wkpth nm '_p'],n);
+    
+    matV2tif(tfn,vi,xli,ybi,kx*rxi,ndv,vi_ors,wkpth);
+
+    Tfl=[Tfl;tfn];
   end
 
 %% Process the upsacled image
@@ -80,8 +87,7 @@ if kx>1 || ky>1
   ds=datestr(ds,'yyyymmdd');
 
 % Image processing (read, mosaic, project, crop, resample)
-  tfl=[wkpth 'VI' nm '_*.tif'];
-  VI=MODISimg(tfl,[],[],wkpth,fullfile(oupth,['VI' ds '.tif']),xl,xr,rx,yb,yt,ry,...
-      ors,'bilinear');
+  oun=fullfile(oupth,['VI' ds '.tif']);
+  VI=MODISimg(Tfl,[],[],wkpth,oun,xl,xr,rx,yb,yt,ry,ors,'bilinear');
 end
 end
