@@ -3,21 +3,21 @@
 % Last update: 08/01/2019
 
 %% Functionality
-% This function calculates the mean vegetation index of a time step by averaging
-%  its two nearest neighbors in time. The weighting factors are defined by the
-%  time distances from the two neighbors to the time step.
+% This function calculates the values of a variable for a time step by linearly
+%  interpolating its two nearest neighbors in time.
+
 %% Input
-% vib/: details of file or workspace variable for vegetation index before/after
-%  via  the time step of interest;
+% imb/: details of file or matlab workspace variable for the variable before/after
+%  ima  the time step of interest;
 %  dn : date number of the time step of interest.
 
 %% Output
-% vi: vegetation index of the time step of interest.
+% im_dn: variable values for the time step of interest.
 
 %% Additional note
 % Require read2Dvar.m.
 
-function vi=Tinterp2D(vib,via,dn)
+function im_dn=Tinterp2D(imb,ima,dn)
 %% Check inputs
 narginchk(3,3);
 ips=inputParser;
@@ -28,20 +28,20 @@ addRequired(ips,'vib',@(x) validateattributes(x,{'double','cell'},{'nonempty'},m
 addRequired(ips,'via',@(x) validateattributes(x,{'double','cell'},{'nonempty'},mfilename,'via',2));
 addRequired(ips,'dn',@(x) validateattributes(x,{'double'},{'nonempty'},mfilename,'dn',3));
 
-%% Mean VI
-[~,dnb,~]=fileparts(vib{1});
-dnb=datenum(dnb(3:end),'yyyymmdd'); % datenum of VI record before the inqury time step
-vib=read2Dvar(vib);
+%% Mean value
+[~,dnb,~]=fileparts(imb{1});
+dnb=datenum(dnb(3:end),'yyyymmdd'); % datenum of record before the inqury time step
+imb=read2Dvar(imb);
 wb=1-abs((dn-dnb))/8;
 
-[~,dna,~]=fileparts(via{1});
-dna=datenum(dna(3:end),'yyyymmdd'); % datenum of VI record after the inqury time step
-via=read2Dvar(via);
+[~,dna,~]=fileparts(ima{1});
+dna=datenum(dna(3:end),'yyyymmdd'); % datenum of record after the inqury time step
+ima=read2Dvar(ima);
 wa=1-abs((dn-dna))/8;
 
-vi=nansum(cat(3,vib*wb,via*wa),3); % mean of VI
+im_dn=nansum(cat(3,imb*wb,ima*wa),3);
 
-k1=isnan(vib) | isnan(via);
-vi(k1)=nansum([vib(k1) via(k1)],2);
-vi(isnan(vib) & isnan(via))=NaN;
+k1=isnan(imb) | isnan(ima);
+im_dn(k1)=nansum([imb(k1) ima(k1)],2);
+im_dn(isnan(imb) & isnan(ima))=NaN;
 end
