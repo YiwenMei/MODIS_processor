@@ -91,10 +91,12 @@ clear ips
 %% Properties of input records
 hif=hdfinfo(lcfl(1,:));
 rn=hif.Vgroup.Name; % Name of the record
-hif=hif.Vgroup.Vgroup(1).SDS(tid); % LC type 3
-lcc=hif.Attributes(2:length(hif.Attributes)-3); % Land cover classes
+hif=hif.Vgroup.Vgroup(1).SDS(tid); % LC type
+% lcc=hif.Attributes(2:length(hif.Attributes)-3); % Land cover classes
 vrf=hif.Name; % Name of the field
-ndv_o=double(hif.Attributes(length(hif.Attributes)-2).Value); % no-data-value of LC
+% ndv_o=double(hif.Attributes(length(hif.Attributes)-2).Value); % no-data-value of LC
+lcc=hif.Attributes(3:length(hif.Attributes)-2); % Land cover classes
+ndv_o=double(hif.Attributes(length(hif.Attributes)-1).Value); % no-data-value of LC
 
 %% Image processing (read, mosaic, project, crop, resample)
 LC=MODISimg(lcfl,wkpth,'',[Bound(1:2,:);[NaN NaN]],ors,rn,vrf,'near',pflg);
@@ -102,37 +104,35 @@ LC(LC==ndv_o)=NaN;
 
 %% Calculate land cover fraction
 [~,ys,~]=fileparts(lcfl(1,:));
-ys=ys(10:13);
+ys=cell2mat(regexp(ys,'.A(\d{4})\d{3}.','tokens','once'));
 
 rsx_in=(Bound(2,1)-Bound(1,1))/size(LC,2);
 rsy_in=(Bound(1,2)-Bound(2,2))/size(LC,1);
 
-LCF=LC_Frac(LC,ndv,Bound(:,1),Bound(:,2),fullfile(wkpth,sprintf('idLC_r%i.mat',Bound(3,1))),...
-  double(lcc(1).Value),thr,[Bound(1:2,1);rsx_in],[Bound(1:2,2);rsy_in]);
+% The 1st tile for idn
+idn=fullfile(wkpth,sprintf('idLC_r%i.mat',Bound(3,1)));
+[~]=LC_process_sub(LC,ndv,Bound,idn,lcc,1,thr,rsx_in,rsy_in,oupth,ys,ors,wkpth);
 
-% Output the land cover fraction images
-IMo=fullfile(oupth,sprintf('LC%02i_%s.tif',lcc(1).Value,ys));
-matV2tif(IMo,LCF,Bound(1,1),Bound(2,2),Bound(3,1),ndv,ors,wkpth);
-
+% Process the other tiles
 switch pflg
   case true
     parfor v=2:length(lcc)
-      LCF=LC_Frac(LC,ndv,Bound(:,1),Bound(:,2),fullfile(wkpth,sprintf('idLC_r%i.mat',Bound(3,1))),...
-        double(lcc(v).Value),thr,[Bound(1:2,1);rsx_in],[Bound(1:2,2);rsy_in]);
-
-% Output the land cover fraction images
-      IMo=fullfile(oupth,sprintf('LC%02i_%s.tif',lcc(v).Value,ys));
-      matV2tif(IMo,LCF,Bound(1,1),Bound(2,2),Bound(3,1),ndv,ors,wkpth);
+      [~]=LC_process_sub(LC,ndv,Bound,idn,lcc,v,thr,rsx_in,rsy_in,oupth,ys,ors,wkpth);
     end
 
   case false
     for v=2:length(lcc)
-      LCF=LC_Frac(LC,ndv,Bound(:,1),Bound(:,2),fullfile(wkpth,sprintf('idLC_r%i.mat',Bound(3,1))),...
-        double(lcc(v).Value),thr,[Bound(1:2,1);rsx_in],[Bound(1:2,2);rsy_in]);
-
-% Output the land cover fraction images
-      IMo=fullfile(oupth,sprintf('LC%02i_%s.tif',lcc(v).Value,ys));
-      matV2tif(IMo,LCF,Bound(1,1),Bound(2,2),Bound(3,1),ndv,ors,wkpth);
+      [~]=LC_process_sub(LC,ndv,Bound,idn,lcc,v,thr,rsx_in,rsy_in,oupth,ys,ors,wkpth);
     end
 end
+end
+
+function LCF=LC_process_sub(LC,ndv,Bound,idn,lcc,v,thr,rsx_in,rsy_in,oupth,ys,ors,wkpth)
+% Calculate the land cover fraction
+LCF=LC_Frac(LC,ndv,Bound(:,1),Bound(:,2),idn,double(lcc(v).Value),thr,...
+    [Bound(1:2,1);rsx_in],[Bound(1:2,2);rsy_in]);
+
+% Output the land cover fraction images
+IMo=fullfile(oupth,sprintf('LC%02i_%s.tif',lcc(v).Value,ys));
+matV2tif(IMo,LCF,Bound(1,1),Bound(2,2),Bound(3,1),ndv,ors,wkpth);
 end

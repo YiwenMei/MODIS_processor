@@ -77,62 +77,30 @@ ky=max(1,fix(Bound(3,2)/ryi));
 
 %% Upscale the image
 Tfl=[];
-idn=fullfile(wkpth,['idVI_r' num2str(Bound(3,1),'%i') '.mat']);
+idn=fullfile(wkpth,['idA_r' num2str(Bound(3,1),'%i') '.mat']);
 ors_i='"+proj=sinu +lon_0=0 +x_0=0 +y_0=0 +a=6371007.181 +b=6371007.181 +units=m +no_defs" ';
 
+tfn=ALB_process_sub(afl(1,:),arf,ndv_o,scf,kx,ky,ndv,idn,thr,wkpth,1,rxi,ors_i);
+Tfl=[Tfl;tfn];
 switch pflg
   case true
-    parfor n=1:size(afl,1)
-      alb=double(hdfread(afl(n,:),arf));
-      alb(alb==ndv_o)=NaN;
-      alb=alb*scf;
-      if max(kx,ky)>1
-        alb=resizeimg(alb,ndv,kx,ky,idn,thr);
-      end
-
-% Write the upscaled image to the working directory
-      hif=hdfinfo(afl(n,:),'EOS');
-      hif=hif.Grid;
-      xli=hif.UpperLeft(1);
-      ybi=hif.LowerRight(2);
-      [~,nm,~]=fileparts(afl(n,:));
-      nm=regexp(nm,'A(?<year>\d+)(?<day>\d{3})','match');
-      nm=cell2mat(nm);
-      tfn=sprintf('%s%02i.tif',[wkpth nm '_p'],n);
-    
-      matV2tif(tfn,alb,xli,ybi,kx*rxi,ndv,ors_i,wkpth);
+    parfor n=2:size(afl,1)
+      tfn=ALB_process_sub(afl(n,:),arf,ndv_o,scf,kx,ky,ndv,idn,thr,wkpth,n,rxi,ors_i);
       Tfl=[Tfl;tfn];
     end
 
   case false
-    for n=1:size(afl,1)
-      alb=double(hdfread(afl(n,:),arf));
-      alb(alb==ndv_o)=NaN;
-      alb=alb*scf;
-      if max(kx,ky)>1
-        alb=resizeimg(alb,ndv,kx,ky,idn,thr);
-      end
-
-% Write the upscaled image to the working directory
-      hif=hdfinfo(afl(n,:),'EOS');
-      hif=hif.Grid;
-      xli=hif.UpperLeft(1);
-      ybi=hif.LowerRight(2);
-      [~,nm,~]=fileparts(afl(n,:));
-      nm=regexp(nm,'A(?<year>\d+)(?<day>\d{3})','match');
-      nm=cell2mat(nm);
-      tfn=sprintf('%s%02i.tif',[wkpth nm '_p'],n);
-
-      matV2tif(tfn,alb,xli,ybi,kx*rxi,ndv,ors_i,wkpth);
+    for n=2:size(afl,1)
+      tfn=ALB_process_sub(afl(n,:),arf,ndv_o,scf,kx,ky,ndv,idn,thr,wkpth,n,rxi,ors_i);
       Tfl=[Tfl;tfn];
     end
 end
 
 %% Process the upsacled image
 [~,ds,~]=fileparts(afl(1,:));
-ys=ds(10:13);
-ds=ds(14:16);
-ds=doy2date(str2double(ds),str2double(ys));
+[ds,~]=regexp(ds,'.A(\d{4})(\d{3}).','tokens','once');
+ys=ds{1};
+ds=doy2date(str2double(ds{2}),str2double(ys));
 ds=datestr(ds,'yyyymmdd');
 
 % Image processing (read, mosaic, project, crop, resample)
@@ -140,3 +108,23 @@ oun=fullfile(oupth,[arf(8:end) ds '.tif']);
 alb=MODISimg(Tfl,wkpth,oun,Bound,ors,'','','bilinear',pflg);
 end
 
+function tfn=ALB_process_sub(afn,arf,ndv_o,scf,kx,ky,ndv,idn,thr,wkpth,n,rxi,ors_i)
+% Upscale image
+alb=double(hdfread(afn,arf));
+alb(alb==ndv_o)=NaN;
+alb=alb*scf;
+if max(kx,ky)>1
+  alb=resizeimg(alb,ndv,kx,ky,idn,thr);
+end
+
+% Write the upscaled image to the working directory
+hif=hdfinfo(afn,'EOS');
+hif=hif.Grid;
+xli=hif.UpperLeft(1);
+ybi=hif.LowerRight(2);
+[~,nm,~]=fileparts(afn);
+nm=cell2mat(regexp(nm,'A(?<year>\d+)(?<day>\d{3})','match'));
+tfn=sprintf('%s%02i.tif',[wkpth nm '_p'],n);
+
+matV2tif(tfn,alb,xli,ybi,kx*rxi,ndv,ors_i,wkpth);
+end
