@@ -1,47 +1,46 @@
 % Yiwen Mei (ymei2@gmu.edu)
 % CEIE, George Mason University
-% Last update: 08/01/2019
+% Last update: 8/1/2019
 
 %% Functionality
-% This function calculates the values of a variable for a time step by linearly
-%  interpolating its two nearest neighbors in time.
+% This function calculates the mean vegetation index of a time step by averaging
+%  its two nearest neighbors in time. The weighting factors are defined by the
+%  time distances from the two neighbors to the time step.
 
 %% Input
-% imb/: details of file or matlab workspace variable for the variable before/after
-%  ima  the time step of interest;
-%  dn : date number of the time step of interest.
+% vi: space-time class (V2DTCls.m) object for vegetation index before and after
+%      the time step of interest;
+% dn: date number of the time step of interest.
 
 %% Output
-% im_dn: variable values for the time step of interest.
+% vi: vegetation index of the time step of interest.
 
 %% Additional note
-% Require read2Dvar.m.
+% Require V2DCls.m.
 
-function im_dn=Tinterp2D(imb,ima,dn)
+function VI=Tinterp2D(vi,dn)
 %% Check inputs
-narginchk(3,3);
+narginchk(2,2);
 ips=inputParser;
 ips.FunctionName=mfilename;
-fprintf('%s received 3 required inputs\n',mfilename);
 
-addRequired(ips,'vib',@(x) validateattributes(x,{'double','cell'},{'nonempty'},mfilename,'vib',1));
-addRequired(ips,'via',@(x) validateattributes(x,{'double','cell'},{'nonempty'},mfilename,'via',2));
-addRequired(ips,'dn',@(x) validateattributes(x,{'double'},{'nonempty'},mfilename,'dn',3));
+addRequired(ips,'vi',@(x) validateattributes(x,{'double','V2DTCls'},{'nonempty'},mfilename,'vi'));
+addRequired(ips,'dn',@(x) validateattributes(x,{'double'},{'nonempty'},mfilename,'dn'));
 
-%% Mean value
-[~,dnb,~]=fileparts(imb{1});
-dnb=datenum(dnb(3:end),'yyyymmdd'); % datenum of record before the inqury time step
-imb=read2Dvar(imb);
-wb=1-abs((dn-dnb))/8;
+parse(ips,vi,dn);
+clear ips
 
-[~,dna,~]=fileparts(ima{1});
-dna=datenum(dna(3:end),'yyyymmdd'); % datenum of record after the inqury time step
-ima=read2Dvar(ima);
-wa=1-abs((dn-dna))/8;
+%% Mean VI
+[X,~]=vi.GridCls;
 
-im_dn=nansum(cat(3,imb*wb,ima*wa),3);
+VI=[];
+for n=1:length(vi.Fnm)
+  VI=cat(2,VI,reshape(vi.readCls(n),numel(X),1));
+end
+VI(isnan(VI(:,1)),1)=VI(isnan(VI(:,1)),2); % Fill NaN by each other's records
+VI(isnan(VI(:,2)),2)=VI(isnan(VI(:,2)),1);
 
-k1=isnan(imb) | isnan(ima);
-im_dn(k1)=nansum([imb(k1) ima(k1)],2);
-im_dn(isnan(imb) & isnan(ima))=NaN;
+Dn=vi.TimeCls;
+w=1-abs(dn-Dn)/diff(Dn);
+VI=reshape(VI*w,size(X));
 end
