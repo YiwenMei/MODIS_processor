@@ -69,18 +69,17 @@ function LC=LC_process(lcfl,tid,wkpth,oupth,Bound,ors,varargin)
 narginchk(6,9);
 ips=inputParser;
 ips.FunctionName=mfilename;
-fprintf('%s received 4 required and %d optional inputs\n',mfilename,length(varargin));
 
-addRequired(ips,'lcfl',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'lcfl',1));
-addRequired(ips,'tid',@(x) validateattributes(x,{'double'},{'scalar','>=',1,'<=',5},mfilename,'tid',2));
-addRequired(ips,'wkpth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'wkpth',3));
-addRequired(ips,'oupth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'oupth',4));
-addRequired(ips,'Bound',@(x) validateattributes(x,{'double'},{'nonempty'},mfilename,'Bound',5));
-addRequired(ips,'ors',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'ors',6));
+addRequired(ips,'lcfl',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'lcfl'));
+addRequired(ips,'tid',@(x) validateattributes(x,{'double'},{'scalar','>=',1,'<=',5},mfilename,'tid'));
+addRequired(ips,'wkpth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'wkpth'));
+addRequired(ips,'oupth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'oupth'));
+addRequired(ips,'Bound',@(x) validateattributes(x,{'double'},{'nonempty'},mfilename,'Bound'));
+addRequired(ips,'ors',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'ors'));
 
-addOptional(ips,'thr',.5,@(x) validateattributes(x,{'double'},{'scalar','>=',0,'<=',1},mfilename,'thr',7));
-addOptional(ips,'ndv',-999,@(x) validateattributes(x,{'double'},{'scalar'},mfilename,'ndv',8));
-addOptional(ips,'pflg',false,@(x) validateattributes(x,{'logical'},{'nonempty'},mfilename,'pflg',9));
+addOptional(ips,'thr',.5,@(x) validateattributes(x,{'double'},{'scalar','>=',0,'<=',1},mfilename,'thr'));
+addOptional(ips,'ndv',-999,@(x) validateattributes(x,{'double'},{'scalar'},mfilename,'ndv'));
+addOptional(ips,'pflg',false,@(x) validateattributes(x,{'logical'},{'nonempty'},mfilename,'pflg'));
 
 parse(ips,lcfl,tid,wkpth,oupth,Bound,ors,varargin{:});
 thr=ips.Results.thr;
@@ -92,11 +91,11 @@ clear ips
 hif=hdfinfo(lcfl(1,:));
 rn=hif.Vgroup.Name; % Name of the record
 hif=hif.Vgroup.Vgroup(1).SDS(tid); % LC type
-% lcc=hif.Attributes(2:length(hif.Attributes)-3); % Land cover classes
+lcc=hif.Attributes(2:length(hif.Attributes)-3); % Land cover classes
 vrf=hif.Name; % Name of the field
-% ndv_o=double(hif.Attributes(length(hif.Attributes)-2).Value); % no-data-value of LC
-lcc=hif.Attributes(3:length(hif.Attributes)-2); % Land cover classes
-ndv_o=double(hif.Attributes(length(hif.Attributes)-1).Value); % no-data-value of LC
+ndv_o=double(hif.Attributes(length(hif.Attributes)-2).Value); % no-data-value of LC
+% lcc=hif.Attributes(3:length(hif.Attributes)-2); % Land cover classes
+% ndv_o=double(hif.Attributes(length(hif.Attributes)-1).Value); % no-data-value of LC
 
 %% Image processing (read, mosaic, project, crop, resample)
 LC=MODISimg(lcfl,wkpth,'',[Bound(1:2,:);[NaN NaN]],ors,rn,vrf,'near',pflg);
