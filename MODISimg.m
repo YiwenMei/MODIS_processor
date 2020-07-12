@@ -15,7 +15,7 @@
 % wkpth: working directory for the code (e.g. C:\...\wkdir\);
 %  oun : full name of output geotiff image (e.g. C:\...\XXX.tif; set it to "[]"
 %        if no need to output the image);
-% Bound: boundary latitude and longitude and resolution of output images (it
+%  GIf : boundary latitude and longitude and resolution of output images (it
 %        follows [xl yt;xr yb;Rx Ry] where x/y/R is the horizontal/vertical/resolution,
 %        l/r/b/t stands for left/right/bottom/top;
 %  ors : coordinate system of output image (e.g. 'EPSG:102012');
@@ -34,31 +34,31 @@
 % 1)Need to have GDAL installed to run the code;
 % 2)No-data value of the original image preserved in "oun".
 
-function imout=MODISimg(imL,wkpth,oun,Bound,ors,varargin)
+function imout=MODISimg(imL,wkpth,GIf,ors,varargin)
 %% Check the input
-narginchk(5,9);
+narginchk(4,9);
 ips=inputParser;
 ips.FunctionName=mfilename;
-fprintf('%s received 7 required and %d optional inputs\n',mfilename,length(varargin));
 
-addRequired(ips,'iml',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'iml',1));
-addRequired(ips,'wkpth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'wkpth',2));
-addRequired(ips,'oun',@(x) validateattributes(x,{'char'},{},mfilename,'wkpth',3));
-addRequired(ips,'Bound',@(x) validateattributes(x,{'double'},{'nonempty'},mfilename,'Bound',4));
-addRequired(ips,'ors',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'ors',5));
+addRequired(ips,'iml',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'iml'));
+addRequired(ips,'wkpth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'wkpth'));
+addRequired(ips,'GIf',@(x) validateattributes(x,{'double'},{'size',[3 2]},mfilename,'GIf'));
+addRequired(ips,'ors',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename,'ors'));
 
-addOptional(ips,'rn','',@(x) validateattributes(x,{'char'},{},mfilename,'rn',6));
-addOptional(ips,'vrf','',@(x) validateattributes(x,{'char'},{},mfilename,'vrf',7));
+addOptional(ips,'oun','',@(x) validateattributes(x,{'char'},{},mfilename,'oun'));
+addOptional(ips,'rn','',@(x) validateattributes(x,{'char'},{},mfilename,'rn'));
+addOptional(ips,'vrf','',@(x) validateattributes(x,{'char'},{},mfilename,'vrf'));
 addOptional(ips,'itm','bilinear',@(x) any(strcmp(x,{'near','bilinear','cubic','cubicspline',...
     'lanczos','average','mode','max','min','med','q1','q3'})));
-addOptional(ips,'pflg',false,@(x) validateattributes(x,{'logical'},{'nonempty'},mfilename,'pflg',9));
+addOptional(ips,'pflg',false,@(x) validateattributes(x,{'logical'},{'nonempty'},mfilename,'pflg'));
 
-parse(ips,imL,wkpth,oun,Bound,ors,varargin{:});
+parse(ips,imL,wkpth,GIf,ors,varargin{:});
+oun=ips.Results.oun;
 rn=ips.Results.rn;
 vrf=ips.Results.vrf;
 itm=ips.Results.itm;
 pflg=ips.Results.pflg;
-clear ips
+clear ips varargin
 
 %% Convert original to geotiff
 [~,nm,fex]=fileparts(imL(1,:));
@@ -66,59 +66,65 @@ if ~strcmp(fex,'.tif')
   if isempty(rn) || isempty(vrf)
     error('rn and vrf cannot be empty');
   else
-    nm=regexp(nm,'A(?<year>\d{4})(?<day>\d{3})','match');
-    nm=cell2mat(nm);
+    ds=cell2mat(regexp(nm,'.A(\d{7}).h','tokens','once'));
 
-    fun='gdal_translate -of GTiff '; % GDAL function
-    pr1=['-r ' itm ' '];
+    fun='gdal_translate -of GTiff -q '; % GDAL function
+    pr1=sprintf('-r %s',itm);
     switch pflg
       case true
         parfor n=1:size(imL,1)
-          inv=['HDF4_EOS:EOS_GRID:"' imL(n,:) '":' rn ':' vrf]; % Full name with record
-          im1=fullfile(wkpth,[nm '_p' num2str(n,'%02i') '.tif']); % name and field name
+          [a,~]=regexp(imL(n,:),'h+\d{2}v+\d{2}','match');
+          a=cell2mat(a);
+          inv=sprintf('HDF4_EOS:EOS_GRID:"%s":%s:%s',imL(n,:),rn,vrf); % Full name with record
+          im1=fullfile(wkpth,sprintf('%s-%s-%s.tif',vrf,ds,a)); % name and field name
 
-          system([fun pr1 inv ' "' im1 '"']);
+          system(sprintf('%s %s %s "%s"',fun,pr1,inv,im1));
         end
 
       case false
         for n=1:size(imL,1)
-          inv=['HDF4_EOS:EOS_GRID:"' imL(n,:) '":' rn ':' vrf]; % Full name with record
-          im1=fullfile(wkpth,[nm '_p' num2str(n,'%02i') '.tif']); % name and field name
+          [a,~]=regexp(imL(n,:),'h+\d{2}v+\d{2}','match');
+          a=cell2mat(a);
+          inv=sprintf('HDF4_EOS:EOS_GRID:"%s":%s:%s',imL(n,:),rn,vrf); % Full name with record
+          im1=fullfile(wkpth,sprintf('%s-%s-%s.tif',vrf,ds,a)); % name and field name
 
-          system([fun pr1 inv ' "' im1 '"']);
+          system(sprintf('%s %s %s "%s"',fun,pr1,inv,im1));
         end
     end
-    inv=fullfile(wkpth,[nm '_p*.tif']);
+    inv=fullfile(wkpth,sprintf('%s-%s-h*v*.tif',vrf,ds));
   end
   
 else
   inv=imL;
-  fpth=fileparts(inv(1,:));
-  nm=cell2mat(regexp(nm,'A(?<year>\d{4})(?<day>\d{3})','match'));
-  inv=fullfile(fpth,[nm '_p*.tif']);
+  wkpth=fileparts(inv(1,:));
+  nm=strsplit(nm,'-');
+  vrf=nm{1};
+  ds=nm{2};
+  inv=fullfile(wkpth,sprintf('%s-%s-h*v*.tif',vrf,ds));
 end
 
 %% Build virtual mosaiced image
-fun='gdalbuildvrt -overwrite ';
-im1=fullfile(wkpth,[nm '.vrt']);
+fun='gdalbuildvrt -overwrite -q';
+im1=fullfile(wkpth,sprintf('%s-%s.vrt',vrf,ds));
 
-system([fun '"' im1 '" ' inv]); % On linux
-% system([fun '"' im1 '" "' inv '"']); % On windows
+cmstr=sprintf('%s %s %s',fun,im1,inv);
+system(cmstr);
 
 %% Project image
-fun='gdalwarp -of GTiff -overwrite ';
-pr1=['-t_srs ' ors ' '];
-pr2=sprintf('-te %i %i %i %i ',Bound(1,1),Bound(2,2),Bound(2,1),Bound(1,2));
-pr3=['-r ' itm ' '];
-if ~isnan(Bound(3,1)) && ~isnan(Bound(3,2))
-  pr4=sprintf('-tr %i %i ',Bound(3,1),Bound(3,2));
+fun='gdalwarp -of GTiff -overwrite -q';
+pr1=sprintf('-t_srs %s',ors);
+pr2=sprintf('-te %i %i %i %i',GIf(1,1),GIf(2,2),GIf(2,1),GIf(1,2));
+pr3=sprintf('-r %s',itm);
+if ~isnan(GIf(3,1)) && ~isnan(GIf(3,2))
+  pr4=sprintf('-tr %i %i',GIf(3,1),GIf(3,2));
+  prm=sprintf('%s %s %s %s',pr1,pr2,pr3,pr4);
 else
-  pr4=[];
+  prm=sprintf('%s %s %s',pr1,pr2,pr3);
 end
-prm=[pr1 pr2 pr3 pr4];
-ouv=fullfile(wkpth,[nm '.tif']);
+ouv=fullfile(wkpth,sprintf('%s-%s.tif',vrf,ds));
 
-system([fun prm '"' im1 '" "' ouv '"']);
+cmstr=sprintf('%s %s "%s" "%s"',fun,prm,im1,ouv);
+system(cmstr);
 delete(inv);
 delete(im1);
 
