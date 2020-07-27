@@ -43,7 +43,7 @@ addRequired(ips,'opth',@(x) validateattributes(x,{'char'},{'nonempty'},mfilename
 if length(vid)~=length(vno)
   error('Number of element in vid must be correspond to those in vno');
 end
-addRequired(ips,'vid',@(x) validateattributes(x,{'double'},{'vector'},mfilename,'vid'));
+addRequired(ips,'vid',@(x) validateattributes(x,{'cell'},{'vector'},mfilename,'vid'));
 addRequired(ips,'vno',@(x) validateattributes(x,{'cell'},{'vector'},mfilename,'vno'));
 addRequired(ips,'GIf',@(x) validateattributes(x,{'double'},{'size',[3 2]},mfilename,'GIf'));
 
@@ -117,9 +117,11 @@ k=cellfun(@(X) contains(X,'.dat.gz'),tfl);
 cellfun(@delete,tfl(~k)); % delete the .txt.gz
 tfl=tfl(k)';
 for v=1:length(vid)
-  fn=cell2mat(gunzip(tfl{vid(v)}));
+  k=contains(tfl,vid{v});
+  
+  fn=cell2mat(gunzip(tfl{k}));
   [~,ds,~]=fileparts(fn);
-  ds=cell2mat(regexp(ds,'TNATS(\d{10})[HD]','tokens','once'));
+  ds=cell2mat(regexp(ds,'TTNATS(\d{10})[HD]','tokens','once'));
 
 %% Create header file
   afn=strrep(fn,'.dat','.hdr');

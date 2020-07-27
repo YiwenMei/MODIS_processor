@@ -70,9 +70,9 @@ addOptional(ips,'rs',[],@(x) validateattributes(x,{'double'},{},mfilename,'rs'))
 addOptional(ips,'pflg',false,@(x) validateattributes(x,{'logical'},{'nonempty'},mfilename,'pflg'));
 
 parse(ips,fname,wkpth,opth,vn,onm,xl,xr,yb,yt,varargin{:});
-pflg=ips.Results.pflg;
 ors=ips.Results.ors;
 rs=ips.Results.rs;
+pflg=ips.Results.pflg;
 clear ips msg varargin
 
 %% Lat/lon grids and other info of CHIRP/CHIRPS

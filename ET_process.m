@@ -97,7 +97,7 @@ if ~isempty(ETfl)
   ds=datestr(doy2date(str2double(ds(5:end)),str2double(ds(1:4))),'yyyymmdd');
   a=regexp(vrf,'_\d+m');
   oun=fullfile(opth,sprintf('MODIS-%s-%s.tif',vrf(1:a-1),ds));
-  imo=MODISimg(Tfl,wkpth,oun,GIf,ors);
+  imo=MODISimg(Tfl,wkpth,GIf,ors,oun);
   imo(imo==ndv)=NaN;
 end
 end
